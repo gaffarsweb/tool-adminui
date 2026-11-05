@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    overscroll-behavior: none;
+    background-color: #11131b;
+    color: #e1e1ed;
+  }
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    background-color: rgba(29, 31, 40, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  .hairline {
+    border: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  .diagnostic-text {
+    font-family: var(--font-geist-sans), 'Geist', sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+}

@@ -1,0 +1,15 @@
+/** @type {import('next').NextConfig} */
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+const nextConfig = {
+  reactStrictMode: true,
+  output: 'standalone',
+  experimental: {
+    optimizePackageImports: ['clsx', 'lucide-react'],
+  },
+  async rewrites() {
+    return [{ source: '/api/:path*', destination: `${API_URL}/api/:path*` }];
+  },
+};
+
+export default nextConfig;
