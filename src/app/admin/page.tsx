@@ -1,94 +1,117 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/primitives/Button';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/surfaces/Card';
-import { AdminTopbar } from '@/components/layout/AdminTopbar';
-import { useCurrentUser } from '@/features/auth/useCurrentUser';
-import { logout } from '@/features/auth/auth-actions';
+import { AdminPageShell } from '@/components/admin/AdminPageShell';
+import { Icon, type IconName } from '@/components/icons/Icon';
+import { apiFetch } from '@/lib/api-client';
+
+interface DashboardKpis {
+  totals: {
+    users: number;
+    tools: number;
+    categories: number;
+    blogPosts: number;
+    activeSubscriptions: number;
+    newContactMessages: number;
+    toolRunsLast30d: number;
+  };
+  topTools: { slug: string; name: string; runs: number }[];
+}
+
+const CARDS: { key: keyof DashboardKpis['totals']; label: string; icon: IconName; tone: string }[] = [
+  { key: 'users', label: 'Total users', icon: 'users', tone: 'bg-primary/15 text-primary' },
+  { key: 'tools', label: 'Tools', icon: 'terminal', tone: 'bg-secondary/15 text-secondary' },
+  { key: 'categories', label: 'Categories', icon: 'category', tone: 'bg-tertiary/15 text-tertiary' },
+  { key: 'blogPosts', label: 'Published posts', icon: 'newspaper', tone: 'bg-primary/15 text-primary' },
+  { key: 'activeSubscriptions', label: 'Active subs', icon: 'credit_card', tone: 'bg-secondary/15 text-secondary' },
+  { key: 'newContactMessages', label: 'New messages', icon: 'mail', tone: 'bg-tertiary/15 text-tertiary' },
+  { key: 'toolRunsLast30d', label: 'Runs · 30d', icon: 'speed', tone: 'bg-primary/15 text-primary' },
+];
 
 export default function AdminDashboard() {
-  const router = useRouter();
-  const { user, loading } = useCurrentUser();
+  const [data, setData] = useState<DashboardKpis | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  if (loading) {
-    return (
-      <main className="flex min-h-screen w-full items-center justify-center bg-surface">
-        <p className="font-body-md text-body-md text-on-surface-variant">Authenticating…</p>
-      </main>
-    );
-  }
-
-  if (!user || user.role !== 'ADMIN') {
-    // middleware redirects the unauthenticated case; this catches
-    // authenticated non-admin users who somehow reached /admin.
-    return (
-      <main className="flex min-h-screen w-full flex-col items-center justify-center gap-space-md bg-surface">
-        <p className="font-body-md text-body-md text-on-surface-variant">
-          Access denied. This console requires role=ADMIN.
-        </p>
-        <Button
-          variant="secondary"
-          onClick={async () => {
-            await logout();
-            router.push('/login');
-          }}
-        >
-          Sign out
-        </Button>
-      </main>
-    );
-  }
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await apiFetch<{ item: DashboardKpis }>('/admin/dashboard');
+        setData(res.item);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not load dashboard');
+      }
+    })();
+  }, []);
 
   return (
-    <>
-      <AdminTopbar title="Command Center" subtitle="Operator dashboard" />
-      <main className="flex-1 p-space-lg">
-        <div className="mb-space-lg">
-          <p className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">
-            Welcome back
-          </p>
-          <h1 className="font-headline-lg text-headline-lg text-on-surface">{user.name}</h1>
-          <p className="font-body-md text-body-md text-on-surface-variant">{user.email}</p>
+    <AdminPageShell title="Command Center" subtitle="Operator dashboard">
+      {error && (
+        <div className="mb-space-md rounded-xl border border-error/30 bg-error-container/20 p-space-md font-body-sm text-body-sm text-error">
+          {error} · Phase 4 seed + DB required for live stats.
         </div>
+      )}
 
-        <div className="grid gap-space-lg md:grid-cols-4">
-          <Card>
-            <p className="mb-space-xs font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">
-              Total users
+      <div className="grid gap-space-md sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+        {CARDS.map((c) => (
+          <Card key={c.key}>
+            <span className={`mb-space-sm inline-flex rounded-lg p-2 ${c.tone}`}>
+              <Icon name={c.icon} size={18} />
+            </span>
+            <p className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">
+              {c.label}
             </p>
-            <p className="font-headline-md text-headline-md text-on-surface">— · Phase 7</p>
-          </Card>
-          <Card>
-            <p className="mb-space-xs font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">
-              Active subscriptions
+            <p className="font-headline-md text-headline-md font-bold text-on-surface">
+              {data ? data.totals[c.key].toLocaleString() : '—'}
             </p>
-            <p className="font-headline-md text-headline-md text-on-surface">— · Phase 9</p>
           </Card>
-          <Card>
-            <p className="mb-space-xs font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">
-              Published blog posts
+        ))}
+      </div>
+
+      <div className="mt-space-xl grid gap-space-lg lg:grid-cols-2">
+        <Card>
+          <h2 className="mb-space-md font-headline-md text-headline-md text-on-surface">Top tools</h2>
+          {!data || data.topTools.length === 0 ? (
+            <p className="font-body-md text-body-md text-on-surface-variant">
+              No usage data yet. Logs land as users run tools.
             </p>
-            <p className="font-headline-md text-headline-md text-on-surface">— · Phase 10</p>
-          </Card>
-          <Card>
-            <p className="mb-space-xs font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">
-              Session
-            </p>
-            <Button
-              variant="secondary"
-              className="mt-space-sm"
-              onClick={async () => {
-                await logout();
-                router.push('/login');
-                router.refresh();
-              }}
-            >
-              Sign out
-            </Button>
-          </Card>
-        </div>
-      </main>
-    </>
+          ) : (
+            <ul className="flex flex-col divide-y divide-outline-variant/30">
+              {data.topTools.map((t) => (
+                <li key={t.slug} className="flex items-center justify-between py-space-sm">
+                  <span className="font-body-md text-body-md text-on-surface">{t.name}</span>
+                  <span className="font-label-md text-label-md text-on-surface-variant">
+                    {t.runs.toLocaleString()} runs
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+        <Card>
+          <h2 className="mb-space-md font-headline-md text-headline-md text-on-surface">Jump to</h2>
+          <div className="grid grid-cols-2 gap-space-sm">
+            {[
+              { href: '/admin/tools', label: 'Manage tools', icon: 'terminal' as const },
+              { href: '/admin/categories', label: 'Categories', icon: 'category' as const },
+              { href: '/admin/users', label: 'Users', icon: 'users' as const },
+              { href: '/admin/blog', label: 'Blog', icon: 'newspaper' as const },
+              { href: '/admin/plans', label: 'Plans', icon: 'tag' as const },
+              { href: '/admin/settings', label: 'Settings', icon: 'settings' as const },
+            ].map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="flex items-center gap-space-sm rounded-xl border border-white/[0.09] bg-surface-container-low px-space-md py-space-sm font-label-lg text-label-lg text-on-surface transition-colors hover:border-secondary/40"
+              >
+                <Icon name={l.icon} size={18} />
+                {l.label}
+              </Link>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </AdminPageShell>
   );
 }
